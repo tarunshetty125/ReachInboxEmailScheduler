@@ -1,0 +1,87 @@
+// Read-only Prisma Studio schema. It intentionally omits attachments.data so
+// Studio never attempts to serialize large image/video/PDF buffers to the UI.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailStatus {
+  pending
+  queued
+  sending
+  sent
+  failed
+  rate_limited
+}
+
+model User {
+  id        String   @id @db.Uuid
+  googleId  String   @unique @map("google_id")
+  email     String   @unique
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
+
+model Sender {
+  id          String   @id @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  email       String
+  aliasEmail  String?  @map("alias_email")
+  name        String
+  smtpHost    String   @map("smtp_host")
+  smtpPort    Int      @map("smtp_port")
+  isDefault   Boolean  @map("is_default")
+  hourlyLimit Int      @map("hourly_limit")
+  createdAt   DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("senders")
+}
+
+model Email {
+  id                 String      @id @db.Uuid
+  userId             String      @map("user_id") @db.Uuid
+  senderId           String      @map("sender_id") @db.Uuid
+  batchId            String      @map("batch_id") @db.Uuid
+  recipientEmail     String      @map("recipient_email")
+  subject            String      @db.VarChar(1000)
+  status             EmailStatus
+  scheduledAt        DateTime    @map("scheduled_at") @db.Timestamptz(6)
+  sentAt             DateTime?   @map("sent_at") @db.Timestamptz(6)
+  etherealUrl        String?     @map("ethereal_url")
+  errorMessage       String?     @map("error_message")
+  retryCount         Int         @map("retry_count")
+  isStarred          Boolean     @map("is_starred")
+  delayBetweenMs     Int         @map("delay_between_ms")
+  hourlyLimit        Int         @map("hourly_limit")
+  createdAt          DateTime    @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @map("updated_at") @db.Timestamptz(6)
+
+  @@map("emails")
+}
+
+model Attachment {
+  id        String   @id @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  fileName  String   @map("file_name") @db.VarChar(255)
+  mimeType  String   @map("mime_type") @db.VarChar(100)
+  size      Int
+  createdAt DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("attachments")
+}
+
+model EmailAttachment {
+  emailId      String @map("email_id") @db.Uuid
+  attachmentId String @map("attachment_id") @db.Uuid
+
+  @@id([emailId, attachmentId])
+  @@map("email_attachments")
+}

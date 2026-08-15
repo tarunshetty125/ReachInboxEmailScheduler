@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmailStatus {
+  pending
+  queued
+  sending
+  sent
+  failed
+  rate_limited
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  googleId  String   @unique @map("google_id")
+  email     String   @unique
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  senders   Sender[]
+  emails    Email[]
+  attachments Attachment[]
+
+  @@map("users")
+}
+
+model Sender {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  email     String
+  aliasEmail String? @map("alias_email")
+  name      String
+  smtpHost  String   @map("smtp_host")
+  smtpPort  Int      @map("smtp_port")
+  smtpUser  String   @map("smtp_user")
+  smtpPass  String   @map("smtp_pass")
+  isDefault Boolean  @default(false) @map("is_default")
+  hourlyLimit Int    @default(50) @map("hourly_limit")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails    Email[]
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@map("senders")
+}
+
+model Email {
+  id                 String      @id @default(uuid()) @db.Uuid
+  userId             String      @map("user_id") @db.Uuid
+  senderId           String      @map("sender_id") @db.Uuid
+  batchId            String      @map("batch_id") @db.Uuid
+  recipientEmail     String      @map("recipient_email")
+  subject            String      @db.VarChar(1000)
+  bodyHtml           String      @map("body_html")
+  status             EmailStatus @default(pending)
+  scheduledAt        DateTime    @map("scheduled_at") @db.Timestamptz(6)
+  sentAt             DateTime?   @map("sent_at") @db.Timestamptz(6)
+  etherealUrl        String?     @map("ethereal_url")
+  errorMessage       String?     @map("error_message")
+  retryCount         Int         @default(0) @map("retry_count")
+  isStarred          Boolean     @default(false) @map("is_starred")
+  delayBetweenMs     Int         @map("delay_between_ms")
+  hourlyLimit        Int         @map("hourly_limit")
+  idempotencyKey     String      @unique @map("idempotency_key")
+  createdAt          DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender             Sender      @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  attachments        EmailAttachment[]
+
+  @@index([userId, status])
+  @@index([batchId])
+  @@index([senderId])
+  @@index([scheduledAt])
+  @@map("emails")
+}
+
+// Files are stored once and linked to every email in a scheduled batch. This
+// avoids duplicating a large image or video for every recipient.
+model Attachment {
+  id        String            @id @default(uuid()) @db.Uuid
+  userId    String            @map("user_id") @db.Uuid
+  fileName  String            @map("file_name") @db.VarChar(255)
+  mimeType  String            @map("mime_type") @db.VarChar(100)
+  size      Int
+  data      Bytes
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails    EmailAttachment[]
+
+  @@index([userId])
+  @@map("attachments")
+}
+
+model EmailAttachment {
+  emailId      String     @map("email_id") @db.Uuid
+  attachmentId String     @map("attachment_id") @db.Uuid
+  email        Email      @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  attachment   Attachment @relation(fields: [attachmentId], references: [id], onDelete: Restrict)
+
+  @@id([emailId, attachmentId])
+  @@index([attachmentId])
+  @@map("email_attachments")
+}
