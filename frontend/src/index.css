@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-slate-200; }
+  body { @apply m-0 min-w-[320px] bg-white font-sans antialiased; }
+  button, input, select { font: inherit; }
+}
+
+.prose-editor > :first-child { margin-top: 0; }
+.prose-editor p { margin: 0 0 1rem; }
+.prose-editor ul, .prose-editor ol { margin: 0 0 1rem 1.5rem; }
+.prose-editor blockquote { border-left: 3px solid #10b981; margin: 1rem 0; padding-left: 1rem; color: #64748b; }
+.ProseMirror p.is-editor-empty:first-child::before { color: #94a3b8; content: attr(data-placeholder); float: left; height: 0; pointer-events: none; }
+.prose { color: inherit; line-height: 1.8; }
+.prose img { max-width: 100%; }
+
+/* Keeps long batch lists scrollable while the dashboard chrome remains fixed. */
+.dashboard-email-scroll { scrollbar-gutter: stable; }
+
+.apple-loader {
+  position: relative;
+  width: 34px;
+  height: 34px;
+}
+
+.apple-loader-spoke {
+  position: absolute;
+  top: 1px;
+  left: calc(50% - 1.5px);
+  width: 3px;
+  height: 9px;
+  border-radius: 999px;
+  transform-origin: 1.5px 16px;
+  background: #475569;
+  animation: apple-loader-fade 1.2s linear infinite;
+}
+
+.dark .apple-loader-spoke { background: #cbd5e1; }
+
+@keyframes apple-loader-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apple-loader-spoke { animation: none; opacity: 0.7; }
+}
